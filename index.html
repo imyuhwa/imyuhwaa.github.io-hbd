@@ -431,7 +431,7 @@ body::after {
         <div id="gateReveal" class="hidden">
           <p class="eyebrow">잠긴 저장소</p>
           <h1 class="lock">열람 권한이 필요합니다</h1>
-          <p class="sub">이 저장소는 단 한 사람만 열 수 있어요.<br>당신이 세상에 온 날, 숫자 여덟 자리.</p>
+          <p class="sub">이 저장소는 모든 문제를 맞춰야 열람할 수 있어요.<br>나현이가 세상에 온 날, 숫자 여덟 자리.</p>
           <form class="gate-form" id="gateForm">
             <span class="caret">&gt;</span>
             <input class="field" id="gateInput" type="password" inputmode="numeric"
@@ -450,7 +450,7 @@ body::after {
           <span class="q-count" id="qCount">01 / 05</span>
           <span class="q-track"><span id="qFill" style="width:0%"></span></span>
         </div>
-        <p class="eyebrow" id="qEyebrow">우리만 아는 문제</p>
+        <p class="eyebrow" id="qEyebrow">나현유화 퀴즈</p>
         <h2 class="q-text" id="qText"></h2>
 
         <div id="qPick" class="hidden">
@@ -510,8 +510,8 @@ const CONFIG = {
     {
       q: "나현이가 가장 좋아하는 동물은?",
       type: "text",
-      answers: ["햄스터", "햄쥐", "hamster"],
-      hint: "작고, 볼주머니 빵빵하고, 해바라기씨 좋아하는 그거"
+      answers: ["햄스터"],
+      hint: "작고, 볼주머니 빵빵하고, 해바라기씨 좋아하는 찍찍"
     },
     {
       q: "나현이의 애착인형 이름은?",
@@ -522,9 +522,9 @@ const CONFIG = {
     {
       q: "유화가 가장 좋아하는 색 두 가지는?",
       type: "pick2",
-      options: ["하얀색", "핑크색", "검은색", "하늘색", "노란색", "보라색"],
+      options: ["하얀색", "하늘색", "검은색", "핑크색", "노란색", "보라색"],
       answers: ["하얀색", "핑크색"],
-      hint: "지금 이 화면에 쓰인 색을 잘 봐"
+      hint: "공주"
     },
     {
       q: "나현이와 유화는 올해 몇 주년일까요?",
@@ -569,7 +569,7 @@ const CONFIG = {
   ],
 
   /* ── 마지막 인사 ────────────────────────────────────────── */
-  closing: "불러온 추억 <strong>11년</strong> 분량. 아직 자리는 많이 남아 있어요.<br>생일 축하해, 나현아."
+  closing: "불러온 추억 <strong>11년</strong> 분량. 아직 자리는 많이 남아 있어요.<br>생일 축하해 나현아₍ᐢ.ˬ.⑅ᐢ₎"
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -644,7 +644,7 @@ $("gateForm").addEventListener("submit", (e) => {
     feed.className = "feedback bad";
     feed.textContent = gateTries >= 2
       ? "아직 아니야. 힌트 — 2002년 8월의 어느 날, 숫자 여덟 자리."
-      : "음… 다시 생각해볼래?";
+      : "누구세요?";
     $("gateInput").value = "";
     $("gateInput").focus();
   }
@@ -707,7 +707,7 @@ function judge(correct) {
     feed.className = tries >= 2 ? "feedback hint" : "feedback bad";
     feed.textContent = tries >= 2
       ? "힌트 — " + CONFIG.quiz[qi].hint
-      : "아니야, 다시 한 번.";
+      : "엥‹( ｡ •̀ ᴖ •́ ｡ )›";
   }
 }
 
