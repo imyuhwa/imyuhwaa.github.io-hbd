@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17111b">
+<meta name="robots" content="noindex, nofollow">
+<title>나현이 열람실</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Nanum+Gothic+Coding:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&family=Gowun+Dodum&display=swap">
+</head>
+<body>
+<style>
+/* ============================================================
+   나현이 열람실 — 단일 비주얼 월드(어두운 콘솔 화면)로 고정.
+   모든 색을 명시적으로 지정하여 어떤 테마에서도 동일하게 보임.
+   ============================================================ */
+:root {
+  --ground:      #17111b;
+  --ground-lift: #211823;
+  --ground-edge: #2e2130;
+  --ink:         #f6ecf1;
+  --ink-dim:     #a2919d;
+  --ink-faint:   #6d5c67;
+  --glow:        #ff9dc0;
+  --glow-deep:   #d4568a;
+  --glow-soft:   rgba(255, 157, 192, 0.14);
+  --paper:       #fdf7f4;
+  --paper-ink:   #3a2b31;
+  --paper-dim:   #8c757d;
+
+  --mono: 'IBM Plex Mono', 'Nanum Gothic Coding', ui-monospace, monospace;
+  --serif: 'Nanum Myeongjo', 'Apple SD Gothic Neo', serif;
+  --sans: 'Gowun Dodum', 'Apple SD Gothic Neo', sans-serif;
+
+  --step: 0.75rem;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, rgba(255,157,192,0.10), transparent 60%),
+    radial-gradient(100% 60% at 50% 110%, rgba(212,86,138,0.07), transparent 60%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(0.5rem, 3vw, 3rem);
+}
+
+/* 아주 옅은 스캔라인 — 터미널 질감 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.018) 0px,
+    rgba(255,255,255,0.018) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 90;
+}
+
+/* ---------- 기계 프레임 ---------- */
+.machine {
+  width: 100%;
+  max-width: 880px;
+  border: 1px solid var(--ground-edge);
+  background: var(--ground-lift);
+  box-shadow:
+    0 0 0 1px rgba(255,157,192,0.06),
+    0 40px 90px -30px rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  min-height: min(88vh, 720px);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--ground-edge);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.035), transparent);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  flex-wrap: wrap;
+}
+.dots { display: flex; gap: 0.4rem; flex: none; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ground-edge); }
+.dot:first-child { background: var(--glow-deep); }
+.bar .path { color: var(--ink-dim); }
+.bar .rail {
+  margin-left: auto;
+  color: var(--glow);
+  letter-spacing: 0.28em;
+  font-size: 10px;
+}
+
+.screen {
+  flex: 1;
+  padding: clamp(1.4rem, 4vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ---------- 섹션 전환 ---------- */
+.stage { display: none; flex: 1; flex-direction: column; }
+.stage.is-active { display: flex; animation: rise 0.5s ease both; }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- 공통 터미널 타이포 ---------- */
+.log { margin: 0 0 0.15rem; color: var(--ink-dim); font-size: 13.5px; }
+.log .ok { color: var(--glow); }
+.log .dimmer { color: var(--ink-faint); }
+
+.prompt-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.caret { color: var(--glow); flex: none; font-weight: 600; }
+
+.eyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 0.6rem;
+}
+
+.blink {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  background: var(--glow);
+  vertical-align: -0.18em;
+  animation: blink 1.05s steps(2, start) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ---------- 입력 ---------- */
+.field {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--ground-edge);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
+  padding: 0.45rem 0.2rem;
+  min-width: 0;
+  flex: 1 1 12ch;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field::placeholder { color: var(--ink-faint); letter-spacing: 0.1em; }
+.field:focus { border-color: var(--glow); }
+.field:focus-visible { box-shadow: 0 2px 0 var(--glow); }
+
+.btn {
+  font-family: var(--sans);
+  font-size: 14px;
+  background: transparent;
+  color: var(--glow);
+  border: 1px solid var(--glow-deep);
+  padding: 0.5rem 1.3rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  flex: none;
+}
+.btn:hover { background: var(--glow-soft); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+.btn.solid { background: var(--glow-deep); color: #2a1119; border-color: var(--glow-deep); font-weight: 600; }
+.btn.solid:hover { background: var(--glow); }
+.btn.ghost { border-color: var(--ground-edge); color: var(--ink-dim); }
+.btn.ghost:hover { border-color: var(--ink-faint); background: rgba(255,255,255,0.03); }
+
+.feedback { min-height: 1.6em; font-size: 13px; margin-top: 0.9rem; }
+.feedback.bad { color: var(--glow-deep); }
+.feedback.good { color: var(--glow); }
+.feedback.hint { color: var(--ink-dim); }
+
+/* ---------- 1. 비밀번호 ---------- */
+#gate .gate-body { margin-top: auto; margin-bottom: auto; max-width: 46ch; }
+#gate .lock {
+  font-size: clamp(1.6rem, 5vw, 2.3rem);
+  font-family: var(--serif);
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0.4rem 0 0.3rem;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+#gate .sub { color: var(--ink-dim); font-size: 13.5px; margin: 0 0 1.8rem; }
+.gate-form { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.hidden { display: none !important; }
+
+/* ---------- 2. 퀴즈 ---------- */
+.q-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.6rem;
+  flex-wrap: wrap;
+}
+.q-count {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--glow);
+  border: 1px solid var(--glow-deep);
+  padding: 0.15rem 0.55rem;
+  flex: none;
+}
+.q-track {
+  flex: 1;
+  height: 1px;
+  background: var(--ground-edge);
+  position: relative;
+  min-width: 60px;
+}
+.q-track span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--glow);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.q-text {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 4.2vw, 2rem);
+  line-height: 1.45;
+  margin: 0 0 1.8rem;
+  color: var(--ink);
+  text-wrap: balance;
+  max-width: 30ch;
+}
+.q-body { margin-top: auto; margin-bottom: auto; width: 100%; }
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1.4rem;
+}
+.chip {
+  font-family: var(--sans);
+  font-size: 14.5px;
+  background: transparent;
+  border: 1px solid var(--ground-edge);
+  color: var(--ink-dim);
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.chip:hover { border-color: var(--ink-faint); color: var(--ink); }
+.chip:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+.chip[aria-pressed="true"] {
+  border-color: var(--glow);
+  color: var(--glow);
+  background: var(--glow-soft);
+}
+.pick-note { font-size: 12px; color: var(--ink-faint); margin: 0 0 0.9rem; }
+
+.q-actions { display: flex; gap: 0.7rem; align-items: baseline; flex-wrap: wrap; }
+
+/* ---------- 3. 편지 ---------- */
+#letter { justify-content: center; }
+.letter-card {
+  background: var(--paper);
+  color: var(--paper-ink);
+  padding: clamp(2rem, 6vw, 3.6rem) clamp(1.6rem, 5vw, 3.4rem);
+  max-width: 40rem;
+  margin: 0 auto;
+  box-shadow: 0 30px 70px -25px rgba(0,0,0,0.7);
+  border-top: 3px solid var(--glow-deep);
+  animation: slide-out 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  position: relative;
+}
+@keyframes slide-out {
+  from { opacity: 0; transform: translateY(34px) scale(0.975); }
+  to   { opacity: 1; transform: none; }
+}
+.letter-date {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--paper-dim);
+  margin: 0 0 1.6rem;
+}
+.letter-to {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: clamp(1.5rem, 4.5vw, 2.1rem);
+  margin: 0 0 1.6rem;
+  color: var(--paper-ink);
+  letter-spacing: -0.01em;
+}
+.letter-body {
+  font-family: var(--serif);
+  font-size: 16.5px;
+  line-height: 2.05;
+  color: var(--paper-ink);
+}
+.letter-body p { margin: 0 0 1.35em; max-width: 34ch; }
+.letter-body p:last-child { margin-bottom: 0; }
+.letter-from {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 17px;
+  text-align: right;
+  margin: 2.6rem 0 0;
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(58,43,49,0.12);
+  color: var(--paper-ink);
+}
+.letter-after {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+/* ---------- 4. 추억 ---------- */
+.boot { margin-bottom: 2rem; }
+.mem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1.4rem;
+  margin-top: 0.5rem;
+}
+.frame {
+  background: var(--paper);
+  padding: 0.7rem 0.7rem 0.2rem;
+  box-shadow: 0 16px 34px -18px rgba(0,0,0,0.8);
+  opacity: 0;
+  animation: pop 0.6s ease forwards;
+}
+@keyframes pop {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+.frame .shot {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  display: block;
+  background: var(--ground-edge);
+}
+.frame .ph {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: #efe4e6;
+  border: 1px dashed var(--glow-deep);
+  color: var(--paper-dim);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-align: center;
+  padding: 0.6rem;
+  line-height: 1.5;
+}
+.frame .ph b { color: var(--glow-deep); font-size: 15px; letter-spacing: 0.06em; }
+.frame .cap {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--paper-dim);
+  padding: 0.6rem 0.15rem 0.7rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  line-height: 1.5;
+}
+.frame .cap b { color: var(--glow-deep); flex: none; font-weight: 600; }
+
+.closing {
+  margin-top: 2.8rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--ground-edge);
+  color: var(--ink-dim);
+  font-size: 13.5px;
+}
+.closing strong { color: var(--glow); font-weight: 500; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::after, *::before {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .blink { animation: none; }
+}
+</style>
+
+<div class="machine">
+  <header class="bar">
+    <div class="dots"><i class="dot"></i><i class="dot"></i><i class="dot"></i></div>
+    <span class="path" id="path">~/nahyeon</span>
+    <span class="rail" id="rail">■□□□</span>
+  </header>
+
+  <main class="screen">
+
+    <!-- 1. 비밀번호 -->
+    <section class="stage is-active" id="gate">
+      <div class="gate-body">
+        <div class="boot" id="gateBoot" aria-live="polite"></div>
+        <div id="gateReveal" class="hidden">
+          <p class="eyebrow">잠긴 저장소</p>
+          <h1 class="lock">열람 권한이 필요합니다</h1>
+          <p class="sub">이 저장소는 단 한 사람만 열 수 있어요.<br>당신이 세상에 온 날, 숫자 여덟 자리.</p>
+          <form class="gate-form" id="gateForm">
+            <span class="caret">&gt;</span>
+            <input class="field" id="gateInput" type="password" inputmode="numeric"
+                   autocomplete="off" placeholder="········" maxlength="8" aria-label="비밀번호 여덟 자리">
+            <button class="btn" type="submit">열기</button>
+          </form>
+          <p class="feedback" id="gateFeed" role="status"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 퀴즈 -->
+    <section class="stage" id="quiz">
+      <div class="q-body">
+        <div class="q-head">
+          <span class="q-count" id="qCount">01 / 05</span>
+          <span class="q-track"><span id="qFill" style="width:0%"></span></span>
+        </div>
+        <p class="eyebrow" id="qEyebrow">우리만 아는 문제</p>
+        <h2 class="q-text" id="qText"></h2>
+
+        <div id="qPick" class="hidden">
+          <p class="pick-note">두 개를 골라주세요</p>
+          <div class="chips" id="qChips"></div>
+          <div class="q-actions">
+            <button class="btn" type="button" id="qPickSubmit">확인</button>
+          </div>
+        </div>
+
+        <form id="qTypeForm" class="q-actions">
+          <span class="caret">&gt;</span>
+          <input class="field" id="qInput" type="text" autocomplete="off"
+                 placeholder="답을 적어주세요" aria-label="정답 입력">
+          <button class="btn" type="submit">확인</button>
+        </form>
+
+        <p class="feedback" id="qFeed" role="status"></p>
+      </div>
+    </section>
+
+    <!-- 3. 편지 -->
+    <section class="stage" id="letter">
+      <article class="letter-card">
+        <p class="letter-date" id="lDate"></p>
+        <h2 class="letter-to" id="lTo"></h2>
+        <div class="letter-body" id="lBody"></div>
+        <p class="letter-from" id="lFrom"></p>
+      </article>
+      <div class="letter-after">
+        <button class="btn solid" type="button" id="toMemories">추억 불러오기</button>
+      </div>
+    </section>
+
+    <!-- 4. 추억 -->
+    <section class="stage" id="memories">
+      <div class="boot" id="memBoot" aria-live="polite"></div>
+      <div class="mem-grid hidden" id="memGrid"></div>
+      <div class="closing hidden" id="memClosing"></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ▼▼▼ 여기만 고치면 됩니다 ▼▼▼
+   ══════════════════════════════════════════════════════════════ */
+
+const CONFIG = {
+
+  /* ── 1. 비밀번호 ────────────────────────────────────────── */
+  password: "20020824",
+
+  /* ── 2. 퀴즈 ────────────────────────────────────────────── */
+  quiz: [
+    {
+      q: "나현이가 가장 좋아하는 동물은?",
+      type: "text",
+      answers: ["햄스터", "햄쥐", "hamster"],
+      hint: "작고, 볼주머니 빵빵하고, 해바라기씨 좋아하는 그거"
+    },
+    {
+      q: "나현이의 애착인형 이름은?",
+      type: "text",
+      answers: ["나몽이", "나몽"],
+      hint: "이름 앞글자가 너랑 똑같아"
+    },
+    {
+      q: "유화가 가장 좋아하는 색 두 가지는?",
+      type: "pick2",
+      options: ["하얀색", "핑크색", "검은색", "하늘색", "노란색", "보라색"],
+      answers: ["하얀색", "핑크색"],
+      hint: "지금 이 화면에 쓰인 색을 잘 봐"
+    },
+    {
+      q: "나현이와 유화는 올해 몇 주년일까요?",
+      type: "text",
+      answers: ["11", "11주년", "11년", "십일", "십일년", "십일주년"],
+      hint: "2015년 3월, 중1 봄에 처음 만났지"
+    },
+    {
+      q: "유화에게 가장 소중한 친구는?",
+      type: "text",
+      answers: ["안나현", "나현", "나현이"],
+      hint: "지금 이 화면을 보고 있는 사람"
+    }
+  ],
+
+  /* ── 3. 편지 ── 문단은 "" 안에 하나씩, 쉼표로 구분 ───────── */
+  letter: {
+    date: "2026 . 08 . 24",
+    to: "나현이에게",
+    paragraphs: [
+      "(여기에 편지를 적어주세요.)",
+      "문단을 나누고 싶으면 아래 CONFIG.letter.paragraphs 안에 따옴표로 감싼 문장을 쉼표로 이어서 추가하면 돼요. 몇 개든 늘어나고, 줄 간격이랑 여백은 알아서 잡힙니다.",
+      "지금 보이는 이 글은 임시 문구예요. 나중에 진짜 편지로 바꿔 넣으면 이 종이 그대로 예쁘게 나옵니다."
+    ],
+    from: "너를 아주 오래 좋아한, 유화"
+  },
+
+  /* ── 4. 추억 사진 ───────────────────────────────────────────
+     · GitHub 저장소에 photos 폴더를 만들고 사진을 넣으세요.
+     · src 는 파일 이름만 맞춰주면 됩니다. (예: "photos/01.jpg")
+     · 사진이 없으면 아래처럼 자리 표시가 보여요. 개수는 자유롭게 늘리거나 줄이세요.
+     ─────────────────────────────────────────────────────────── */
+  photos: [
+    { src: "photos/01.jpg", year: "2015", caption: "중1, 우리가 처음 만난 봄" },
+    { src: "photos/02.jpg", year: "2017", caption: "여기에 설명을 적어주세요" },
+    { src: "photos/03.jpg", year: "2019", caption: "여기에 설명을 적어주세요" },
+    { src: "photos/04.jpg", year: "2021", caption: "여기에 설명을 적어주세요" },
+    { src: "photos/05.jpg", year: "2023", caption: "여기에 설명을 적어주세요" },
+    { src: "photos/06.jpg", year: "2024", caption: "여기에 설명을 적어주세요" },
+    { src: "photos/07.jpg", year: "2025", caption: "여기에 설명을 적어주세요" },
+    { src: "photos/08.jpg", year: "2026", caption: "스물넷의 너" }
+  ],
+
+  /* ── 마지막 인사 ────────────────────────────────────────── */
+  closing: "불러온 추억 <strong>11년</strong> 분량. 아직 자리는 많이 남아 있어요.<br>생일 축하해, 나현아."
+};
+
+/* ══════════════════════════════════════════════════════════════
+   ▲▲▲ 여기까지 ▲▲▲   아래는 건드리지 않아도 됩니다.
+   ══════════════════════════════════════════════════════════════ */
+
+const $ = (id) => document.getElementById(id);
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const norm = (s) => String(s).toLowerCase().replace(/\s+/g, "").replace(/[.,!?~]/g, "");
+
+/* 터미널 로그 타이핑 */
+function typeLog(host, lines, done) {
+  host.innerHTML = "";
+  if (REDUCED) {
+    lines.forEach((l) => {
+      const p = document.createElement("p");
+      p.className = "log";
+      p.innerHTML = l.text;
+      host.appendChild(p);
+    });
+    if (done) done();
+    return;
+  }
+  let i = 0;
+  const next = () => {
+    if (i >= lines.length) { if (done) done(); return; }
+    const line = lines[i++];
+    const p = document.createElement("p");
+    p.className = "log";
+    host.appendChild(p);
+    const full = line.text;
+    let c = 0;
+    const tick = () => {
+      c += 2;
+      p.innerHTML = full.slice(0, c) + (c < full.length ? '<span class="blink"></span>' : "");
+      if (c < full.length) setTimeout(tick, 14);
+      else setTimeout(next, line.pause ?? 260);
+    };
+    tick();
+  };
+  next();
+}
+
+function setStage(id, railIdx, path) {
+  document.querySelectorAll(".stage").forEach((s) => s.classList.toggle("is-active", s.id === id));
+  $("rail").textContent = ["■□□□", "■■□□", "■■■□", "■■■■"][railIdx];
+  $("path").textContent = path;
+  window.scrollTo({ top: 0, behavior: REDUCED ? "auto" : "smooth" });
+}
+
+/* ── 1. 비밀번호 ───────────────────────────────────────────── */
+typeLog($("gateBoot"), [
+  { text: '<span class="dimmer">$</span> mount ./memories --owner="안나현"' },
+  { text: '<span class="dimmer">·</span> 11년 분량의 기록을 찾았습니다.' },
+  { text: '<span class="ok">·</span> 잠금 상태 — 인증 대기', pause: 420 }
+], () => {
+  $("gateReveal").classList.remove("hidden");
+  $("gateInput").focus();
+});
+
+let gateTries = 0;
+$("gateForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const val = $("gateInput").value.trim();
+  const feed = $("gateFeed");
+  if (val === CONFIG.password) {
+    feed.className = "feedback good";
+    feed.textContent = "인증됨. 열람실로 들어갑니다…";
+    setTimeout(() => { setStage("quiz", 1, "~/nahyeon/quiz"); renderQ(); }, 750);
+  } else {
+    gateTries++;
+    feed.className = "feedback bad";
+    feed.textContent = gateTries >= 2
+      ? "아직 아니야. 힌트 — 2002년 8월의 어느 날, 숫자 여덟 자리."
+      : "음… 다시 생각해볼래?";
+    $("gateInput").value = "";
+    $("gateInput").focus();
+  }
+});
+
+/* ── 2. 퀴즈 ───────────────────────────────────────────────── */
+let qi = 0, tries = 0, picked = new Set();
+
+function renderQ() {
+  const item = CONFIG.quiz[qi];
+  picked = new Set();
+  tries = 0;
+  $("qCount").textContent = String(qi + 1).padStart(2, "0") + " / " + String(CONFIG.quiz.length).padStart(2, "0");
+  $("qFill").style.width = (qi / CONFIG.quiz.length) * 100 + "%";
+  $("qText").textContent = item.q;
+  $("qFeed").textContent = "";
+  $("qFeed").className = "feedback";
+
+  const isPick = item.type === "pick2";
+  $("qPick").classList.toggle("hidden", !isPick);
+  $("qTypeForm").classList.toggle("hidden", isPick);
+
+  if (isPick) {
+    const box = $("qChips");
+    box.innerHTML = "";
+    item.options.forEach((opt) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = opt;
+      b.setAttribute("aria-pressed", "false");
+      b.addEventListener("click", () => {
+        if (picked.has(opt)) { picked.delete(opt); b.setAttribute("aria-pressed", "false"); }
+        else {
+          if (picked.size >= 2) return;
+          picked.add(opt); b.setAttribute("aria-pressed", "true");
+        }
+      });
+      box.appendChild(b);
+    });
+  } else {
+    $("qInput").value = "";
+    $("qInput").focus();
+  }
+}
+
+function judge(correct) {
+  const feed = $("qFeed");
+  if (correct) {
+    feed.className = "feedback good";
+    feed.textContent = qi + 1 === CONFIG.quiz.length ? "전부 맞았어. 역시 너다." : "정답. 다음 문제로.";
+    $("qFill").style.width = ((qi + 1) / CONFIG.quiz.length) * 100 + "%";
+    setTimeout(() => {
+      qi++;
+      if (qi >= CONFIG.quiz.length) { setStage("letter", 2, "~/nahyeon/letter"); }
+      else renderQ();
+    }, 850);
+  } else {
+    tries++;
+    feed.className = tries >= 2 ? "feedback hint" : "feedback bad";
+    feed.textContent = tries >= 2
+      ? "힌트 — " + CONFIG.quiz[qi].hint
+      : "아니야, 다시 한 번.";
+  }
+}
+
+$("qTypeForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = norm($("qInput").value);
+  if (!v) return;
+  const ok = CONFIG.quiz[qi].answers.some((a) => norm(a) === v);
+  if (!ok) $("qInput").select();
+  judge(ok);
+});
+
+$("qPickSubmit").addEventListener("click", () => {
+  const item = CONFIG.quiz[qi];
+  if (picked.size !== 2) {
+    $("qFeed").className = "feedback hint";
+    $("qFeed").textContent = "두 개를 골라주세요.";
+    return;
+  }
+  const want = item.answers.map(norm).sort().join("|");
+  const got = [...picked].map(norm).sort().join("|");
+  judge(want === got);
+});
+
+/* ── 3. 편지 ───────────────────────────────────────────────── */
+$("lDate").textContent = CONFIG.letter.date;
+$("lTo").textContent = CONFIG.letter.to;
+$("lBody").innerHTML = CONFIG.letter.paragraphs.map((p) => "<p>" + p + "</p>").join("");
+$("lFrom").textContent = CONFIG.letter.from;
+
+$("toMemories").addEventListener("click", () => {
+  setStage("memories", 3, "~/nahyeon/memories");
+  runMemories();
+});
+
+/* ── 4. 추억 ───────────────────────────────────────────────── */
+let memRan = false;
+function runMemories() {
+  if (memRan) return;
+  memRan = true;
+
+  typeLog($("memBoot"), [
+    { text: '<span class="dimmer">$</span> load ./memories --from=2015-03 --to=2026-08' },
+    { text: '<span class="dimmer">·</span> loading memories…', pause: 620 },
+    { text: '<span class="ok">·</span> ' + CONFIG.photos.length + '개의 장면을 불러왔습니다.', pause: 300 }
+  ], () => {
+    const grid = $("memGrid");
+    grid.classList.remove("hidden");
+    grid.innerHTML = "";
+
+    CONFIG.photos.forEach((ph, i) => {
+      const fig = document.createElement("figure");
+      fig.className = "frame";
+      fig.style.margin = "0";
+      fig.style.animationDelay = (REDUCED ? 0 : i * 0.11) + "s";
+
+      const img = document.createElement("img");
+      img.className = "shot";
+      img.alt = ph.year + " — " + ph.caption;
+      img.loading = "lazy";
+      img.addEventListener("error", () => {
+        const ph2 = document.createElement("div");
+        ph2.className = "ph";
+        ph2.innerHTML = "<b>" + ph.year + "</b>사진을 넣어주세요<br>" + ph.src;
+        img.replaceWith(ph2);
+      });
+      img.src = ph.src;
+
+      const cap = document.createElement("figcaption");
+      cap.className = "cap";
+      cap.innerHTML = "<b>" + ph.year + "</b><span>" + ph.caption + "</span>";
+
+      fig.append(img, cap);
+      grid.appendChild(fig);
+    });
+
+    const close = $("memClosing");
+    close.classList.remove("hidden");
+    close.innerHTML = CONFIG.closing;
+  });
+}
+</script>
+</body>
+</html>
